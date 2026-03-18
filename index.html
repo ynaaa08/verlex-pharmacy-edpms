@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Verlex Pharmacy — EDPMS</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --navy:#0a1628;--navy2:#0f2044;--navy3:#152a52;
+  --bg:#f4f6f9;--bg2:#ffffff;--bg3:#eef1f6;
+  --border:#dde2ec;--border2:#e8ecf4;
+  --ink:#0d1b2e;--ink2:#4a5568;--ink3:#8a95a8;
+  --gold:#c9a84c;--gold2:#f0d080;
+  --green:#1a7f4b;--green-bg:#e6f4ed;
+  --blue:#1a5fc9;--blue-bg:#e6eeff;
+  --amber:#b86e00;--amber-bg:#fff3dc;
+  --red:#c0392b;--red-bg:#fdecea;
+  --shadow:0 1px 3px rgba(10,22,40,.07),0 4px 12px rgba(10,22,40,.05);
+  --shadow-lg:0 8px 32px rgba(10,22,40,.14);
+  --sidebar-w:240px;
+  --topbar-h:56px;
+}
+
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;font-size:14px;line-height:1.55;-webkit-tap-highlight-color:transparent;}
+
+/* ── LAYOUT ── */
+.shell{display:flex;min-height:100vh;}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  width:var(--sidebar-w);background:var(--navy);
+  display:flex;flex-direction:column;
+  position:fixed;top:0;left:0;bottom:0;z-index:200;
+  transition:transform .25s ease;
+  border-right:1px solid rgba(255,255,255,.04);
+}
+
+.sidebar.mobile-hidden{transform:translateX(-100%);}
+
+.sb-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.5);z-index:190;
+}
+.sb-overlay.show{display:block;}
+
+.sb-brand{
+  padding:20px 18px 16px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+
+.sb-brand-name{
+  font-family:'Instrument Serif',serif;
+  font-size:1.1rem;color:#fff;letter-spacing:.3px;line-height:1.2;
+}
+
+.sb-brand-sub{
+  font-size:.62rem;color:rgba(255,255,255,.32);
+  text-transform:uppercase;letter-spacing:1.5px;font-weight:500;margin-top:3px;
+}
+
+.sb-nav{padding:10px 10px;flex:1;overflow-y:auto;}
+
+.sb-section{
+  font-size:.59rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:1.8px;color:rgba(255,255,255,.2);padding:10px 10px 4px;
+}
+
+.sb-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 10px;border-radius:6px;
+  cursor:pointer;color:rgba(255,255,255,.5);
+  font-weight:500;font-size:.83rem;
+  transition:all .15s;margin-bottom:1px;
+  user-select:none;letter-spacing:.1px;
+}
+.sb-item:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.8);}
+.sb-item.active{background:rgba(201,168,76,.12);color:var(--gold2);border-left:2px solid var(--gold);padding-left:8px;}
+.sb-item-icon{width:16px;height:16px;flex-shrink:0;opacity:.65;}
+.sb-item.active .sb-item-icon{opacity:1;}
+
+.sb-divider{height:1px;background:rgba(255,255,255,.06);margin:6px 0;}
+
+.sb-bottom{padding:14px;border-top:1px solid rgba(255,255,255,.06);}
+
+.deadline-widget{
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:8px;padding:13px 15px;
+}
+.dw-label{font-size:.59rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,.25);margin-bottom:5px;}
+.dw-val{font-family:'JetBrains Mono',monospace;font-size:1.45rem;font-weight:500;}
+.dw-val.safe{color:#68d9a0;}.dw-val.warn{color:#f5c842;}.dw-val.urgent{color:#f07070;}
+.dw-date{font-size:.68rem;color:rgba(255,255,255,.27);margin-top:3px;}
+
+/* ── MAIN ── */
+.main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-width:0;transition:margin-left .25s;}
+
+/* ── TOPBAR ── */
+.topbar{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:0 20px;height:var(--topbar-h);
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+}
+
+.topbar-left{display:flex;align-items:center;gap:12px;}
+.menu-btn{
+  display:none;background:none;border:none;cursor:pointer;
+  padding:6px;border-radius:5px;color:var(--ink2);
+}
+.menu-btn:hover{background:var(--bg3);}
+.menu-btn svg{display:block;}
+
+.tb-titles h1{font-size:.92rem;font-weight:700;color:var(--ink);letter-spacing:.1px;}
+.tb-titles p{font-size:.7rem;color:var(--ink3);margin-top:1px;}
+
+.tb-right{display:flex;gap:8px;align-items:center;}
+.tb-date{font-size:.7rem;color:var(--ink3);padding-right:10px;border-right:1px solid var(--border);margin-right:2px;}
+
+/* ── BUTTONS ── */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 14px;border-radius:5px;
+  font-size:.8rem;font-weight:600;cursor:pointer;
+  border:1px solid transparent;
+  font-family:'DM Sans',sans-serif;
+  transition:all .15s;white-space:nowrap;letter-spacing:.1px;
+}
+.btn-primary{background:var(--navy);color:#fff;border-color:var(--navy2);}
+.btn-primary:hover{background:var(--navy2);}
+.btn-gold{background:linear-gradient(135deg,var(--gold),#b8932a);color:var(--navy);font-weight:700;}
+.btn-ghost{background:transparent;color:var(--ink2);border-color:var(--border);}
+.btn-ghost:hover{background:var(--bg3);}
+.btn-danger{background:var(--red-bg);color:var(--red);border-color:rgba(192,57,43,.15);}
+.btn-danger:hover{background:#fbd9d6;}
+.btn-warn{background:var(--amber-bg);color:var(--amber);border-color:rgba(184,110,0,.15);}
+.btn-warn:hover{background:#fde8b8;}
+.btn-blue{background:var(--blue);color:#fff;}
+.btn-blue:hover{background:#154fb3;}
+.btn-green-outline{background:var(--green-bg);color:var(--green);border-color:rgba(26,127,75,.2);}
+.btn-sm{padding:5px 11px;font-size:.75rem;}
+.btn-xs{padding:3px 8px;font-size:.7rem;}
+
+/* ── PAGES ── */
+.page{display:none;padding:22px 20px;animation:fadeUp .2s ease;}
+.page.active{display:block;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* ── PAGE HEADER ── */
+.pg-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap;}
+.pg-hdr-l h2{font-size:1.05rem;font-weight:700;}
+.pg-hdr-l p{font-size:.75rem;color:var(--ink3);margin-top:3px;}
+
+/* ── STATS ── */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px 18px;position:relative;overflow:hidden;}
+.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.stat:nth-child(1)::before{background:var(--blue);}
+.stat:nth-child(2)::before{background:var(--green);}
+.stat:nth-child(3)::before{background:var(--amber);}
+.stat:nth-child(4)::before{background:var(--red);}
+.stat-label{font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:var(--ink3);margin-bottom:7px;}
+.stat-value{font-size:1.9rem;font-weight:700;font-family:'JetBrains Mono',monospace;line-height:1;}
+.stat-sub{font-size:.68rem;color:var(--ink3);margin-top:5px;}
+.c-blue{color:var(--blue);}.c-green{color:var(--green);}.c-amber{color:var(--amber);}.c-red{color:var(--red);}
+
+/* ── CARD ── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden;box-shadow:var(--shadow);}
+.card-hdr{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.card-hdr-title{font-size:.85rem;font-weight:700;}
+.card-hdr-sub{font-size:.7rem;color:var(--ink3);margin-top:1px;}
+.card-body{padding:16px 18px;}
+
+/* ── NOTICE ── */
+.notice{display:flex;align-items:flex-start;gap:11px;padding:12px 15px;border-radius:7px;margin-bottom:16px;font-size:.81rem;line-height:1.55;border-left:3px solid;}
+.notice-blue{background:var(--blue-bg);color:#1a3a80;border-left-color:var(--blue);}
+.notice-green{background:var(--green-bg);color:#0f5730;border-left-color:var(--green);}
+.notice-amber{background:var(--amber-bg);color:#7a4900;border-left-color:var(--amber);}
+.notice-red{background:var(--red-bg);color:#7d1e14;border-left-color:var(--red);}
+.notice-icon{width:15px;height:15px;flex-shrink:0;margin-top:2px;opacity:.7;}
+
+/* ── SEARCH ── */
+.sbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.sbar-wrap{position:relative;flex:1;min-width:200px;}
+.sbar-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--ink3);pointer-events:none;}
+.sinput{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px 12px 8px 32px;color:var(--ink);font-family:'DM Sans',sans-serif;font-size:.84rem;transition:border-color .15s;}
+.sinput:focus{outline:none;border-color:var(--blue);}
+.sinput::placeholder{color:var(--ink3);}
+
+/* ── TABLE (desktop) ── */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.tbl{width:100%;border-collapse:collapse;min-width:600px;}
+.tbl thead tr{background:var(--bg3);}
+.tbl th{padding:8px 14px;text-align:left;font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:var(--ink3);border-bottom:1px solid var(--border);white-space:nowrap;}
+.tbl td{padding:10px 14px;border-bottom:1px solid var(--border2);font-size:.81rem;color:var(--ink2);vertical-align:middle;}
+.tbl tr:last-child td{border-bottom:none;}
+.tbl tbody tr:hover td{background:#f8fafd;}
+.tbl td.pk{color:var(--ink);font-weight:600;}
+.mono{font-family:'JetBrains Mono',monospace;font-size:.77rem;}
+
+/* ── DRUG EXPAND ── */
+.drug-row{cursor:pointer;}
+.batch-tbody{display:none;}
+.batch-tbody.open{display:table-row-group;}
+.batch-row td{background:#f8fafd;padding:9px 14px;font-size:.79rem;border-bottom:1px solid var(--border2);}
+.batch-row:hover td{background:#f0f4fb!important;}
+.batch-row:last-child td{border-bottom:2px solid var(--border);}
+.batch-hdr-row td{background:#f0f3f9!important;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);padding:6px 14px;border-bottom:1px solid var(--border);}
+.expand-arrow{display:inline-block;width:11px;height:11px;border-right:1.5px solid var(--ink3);border-bottom:1.5px solid var(--ink3);transform:rotate(-45deg);transition:transform .2s;vertical-align:middle;position:relative;top:-1px;}
+.expand-arrow.open{transform:rotate(45deg);top:-3px;}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:3px;font-size:.66rem;font-weight:700;white-space:nowrap;letter-spacing:.3px;}
+.badge-green{background:var(--green-bg);color:var(--green);}
+.badge-blue{background:var(--blue-bg);color:var(--blue);}
+.badge-amber{background:var(--amber-bg);color:var(--amber);}
+.badge-red{background:var(--red-bg);color:var(--red);}
+.badge-navy{background:var(--navy);color:rgba(255,255,255,.85);}
+.badge-gray{background:var(--bg3);color:var(--ink3);}
+.badge-gold{background:rgba(201,168,76,.15);color:#8a6200;border:1px solid rgba(201,168,76,.3);}
+
+.exp-ok{color:var(--green);font-weight:600;}
+.exp-warn{color:var(--amber);font-weight:600;}
+.exp-bad{color:var(--red);font-weight:600;}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:48px 20px;color:var(--ink3);}
+.empty-icon{width:36px;height:36px;margin:0 auto 12px;opacity:.2;}
+.empty h3{font-size:.88rem;font-weight:600;color:var(--ink2);margin-bottom:4px;}
+.empty p{font-size:.76rem;}
+
+/* ── MODAL ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(10,22,40,.6);backdrop-filter:blur(3px);z-index:300;align-items:center;justify-content:center;padding:16px;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:10px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:mIn .2s ease;}
+.modal-wide{max-width:700px;}
+@keyframes mIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+.modal-hdr{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg2);z-index:1;}
+.modal-hdr-title{font-size:.9rem;font-weight:700;}
+.modal-hdr-sub{font-size:.71rem;color:var(--ink3);margin-top:2px;}
+.modal-close{background:none;border:none;color:var(--ink3);cursor:pointer;padding:4px 8px;border-radius:4px;font-size:1.1rem;line-height:1;}
+.modal-close:hover{background:var(--bg3);}
+.modal-body{padding:20px;}
+.modal-footer{padding:13px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;}
+
+/* ── FORM ── */
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:13px;}
+.fg{display:flex;flex-direction:column;gap:5px;}
+.fg.full{grid-column:1/-1;}
+.fg label{font-size:.7rem;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.5px;}
+.fi{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--ink);font-family:'DM Sans',sans-serif;font-size:.85rem;transition:border-color .15s,box-shadow .15s;width:100%;}
+.fi:focus{outline:none;border-color:var(--blue);background:var(--bg2);}
+.fi::placeholder{color:var(--ink3);}
+select.fi{cursor:pointer;}
+.fi-hint{font-size:.67rem;color:var(--ink3);margin-top:2px;}
+.form-sep{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);padding:12px 0 6px;border-bottom:1px solid var(--border2);margin-bottom:2px;grid-column:1/-1;}
+
+/* ── PHARMACY PROFILE ── */
+.profile-hero{
+  background:linear-gradient(135deg,var(--navy) 0%,var(--navy3) 100%);
+  border-radius:10px;padding:28px;margin-bottom:20px;
+  position:relative;overflow:hidden;
+}
+.profile-hero::before{
+  content:'';position:absolute;top:-40px;right:-40px;
+  width:200px;height:200px;border-radius:50%;
+  background:rgba(201,168,76,.07);
+}
+.profile-hero-name{
+  font-family:'Instrument Serif',serif;
+  font-size:1.6rem;color:#fff;margin-bottom:4px;
+}
+.profile-hero-sub{font-size:.75rem;color:rgba(255,255,255,.45);letter-spacing:.5px;}
+.profile-badges{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
+
+.profile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;}
+.profile-field{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;}
+.profile-field-label{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:var(--ink3);margin-bottom:5px;}
+.profile-field-value{font-size:.88rem;font-weight:600;color:var(--ink);}
+.profile-field-value.mono{font-family:'JetBrains Mono',monospace;font-size:.82rem;}
+
+.license-card{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:10px;padding:20px;margin-bottom:20px;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:16px;flex-wrap:wrap;
+}
+.lc-left h3{font-size:.92rem;font-weight:700;margin-bottom:4px;}
+.lc-left p{font-size:.77rem;color:var(--ink3);}
+.lc-right{text-align:right;}
+.lc-countdown{font-family:'JetBrains Mono',monospace;font-size:1.6rem;font-weight:600;}
+.lc-countdown.safe{color:var(--green);}
+.lc-countdown.warn{color:var(--amber);}
+.lc-countdown.urgent{color:var(--red);}
+.lc-sub{font-size:.7rem;color:var(--ink3);margin-top:2px;}
+
+/* ── REPORTS ── */
+.rpt-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
+.rpt-card{background:var(--bg2);border:2px solid var(--border);border-radius:8px;padding:22px;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;}
+.rpt-card:hover{border-color:var(--blue);}
+.rpt-card-hdr{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.rpt-icon{width:38px;height:38px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.rpt-icon-green{background:var(--green-bg);}
+.rpt-icon-blue{background:var(--blue-bg);}
+.rpt-icon svg{width:19px;height:19px;}
+.rpt-card h3{font-size:.87rem;font-weight:700;margin-bottom:4px;}
+.rpt-card p{font-size:.74rem;color:var(--ink3);line-height:1.55;flex:1;}
+.rpt-card .rpt-btn{margin-top:14px;}
+
+.period-bar{display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:11px 16px;margin-bottom:18px;flex-wrap:wrap;}
+.period-bar label{font-size:.74rem;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.5px;}
+
+/* ── PDF ── */
+.pdf-sheet{background:#fff;color:#1a1a1a;font-family:'DM Sans',sans-serif;padding:32px;border-radius:6px;}
+.pdf-lh{display:flex;align-items:flex-start;justify-content:space-between;padding-bottom:16px;margin-bottom:18px;border-bottom:2px solid #0a1628;}
+.pdf-org-name{font-family:'Instrument Serif',serif;font-size:1.2rem;color:#0a1628;}
+.pdf-org-sub{font-size:.68rem;color:#6b7280;margin-top:3px;}
+.pdf-rpt-title{text-align:right;}
+.pdf-rpt-title h2{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#0a1628;}
+.pdf-rpt-title p{font-size:.67rem;color:#6b7280;margin-top:3px;}
+.pdf-meta{display:flex;justify-content:space-between;font-size:.71rem;color:#374151;margin-bottom:12px;padding:7px 10px;background:#f4f6f9;border-radius:4px;}
+.pdf-tbl{width:100%;border-collapse:collapse;font-size:.69rem;margin-bottom:18px;}
+.pdf-tbl th{background:#0a1628;color:#fff;padding:7px 9px;text-align:left;font-size:.61rem;text-transform:uppercase;letter-spacing:.4px;}
+.pdf-tbl td{padding:6px 9px;border-bottom:1px solid #e5e7eb;color:#374151;}
+.pdf-tbl tr:nth-child(even) td{background:#f9fafb;}
+.pdf-sig{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:24px;padding-top:14px;border-top:1px solid #d1d5db;}
+.pdf-sig-line{border-bottom:1px solid #374151;margin-bottom:4px;height:26px;}
+.pdf-sig-lbl{font-size:.63rem;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;}
+
+/* ── COMPLIANCE ── */
+.comp-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}
+.chk-item{display:flex;align-items:center;gap:10px;padding:10px 13px;border-radius:6px;background:var(--bg3);margin-bottom:6px;border:1px solid transparent;}
+.chk-item.pass{border-color:rgba(26,127,75,.15);background:var(--green-bg);}
+.chk-item.fail{border-color:rgba(192,57,43,.15);background:var(--red-bg);}
+.chk-icon{width:13px;height:13px;flex-shrink:0;}
+.chk-label{flex:1;font-size:.81rem;color:var(--ink2);}
+
+/* ── TIMELINE ── */
+.tl-item{display:flex;align-items:flex-start;gap:11px;padding:9px 0;border-bottom:1px solid var(--border2);}
+.tl-item:last-child{border-bottom:none;}
+.tl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px;background:var(--border);}
+.tl-dot.done{background:var(--green);}
+.tl-dot.active{background:var(--amber);box-shadow:0 0 0 3px rgba(184,110,0,.2);}
+.tl-dot.late{background:var(--red);}
+.tl-t h4{font-size:.81rem;font-weight:600;}
+.tl-t p{font-size:.7rem;color:var(--ink3);margin-top:1px;}
+
+/* ── TOAST ── */
+.toast-wrap{position:fixed;bottom:20px;right:16px;z-index:999;display:flex;flex-direction:column-reverse;gap:8px;max-width:calc(100vw - 32px);}
+.toast{background:var(--navy);color:rgba(255,255,255,.9);border-radius:7px;padding:10px 14px;font-size:.8rem;font-weight:500;display:flex;align-items:center;gap:9px;box-shadow:var(--shadow-lg);animation:tIn .25s ease;min-width:200px;border-left:3px solid;}
+.toast.ok{border-left-color:#68d9a0;}.toast.err{border-left-color:#f07070;}.toast.wrn{border-left-color:#f5c842;}
+@keyframes tIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ══════════════════════════════════
+   RESPONSIVE — TABLET & MOBILE
+══════════════════════════════════ */
+
+/* Tablet (≤1024px) */
+@media(max-width:1024px){
+  .stats{grid-template-columns:repeat(2,1fr);}
+  .dash-grid{grid-template-columns:1fr!important;}
+  .comp-grid{grid-template-columns:1fr!important;}
+  .profile-grid{grid-template-columns:repeat(2,1fr);}
+  .rpt-grid{grid-template-columns:1fr!important;}
+}
+
+/* Mobile sidebar toggle */
+@media(max-width:768px){
+  :root{--sidebar-w:260px;}
+  .sidebar{transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);}
+  .main{margin-left:0!important;}
+  .menu-btn{display:flex;}
+  .tb-date{display:none;}
+  .topbar{padding:0 14px;}
+  .page{padding:16px 14px;}
+  .stats{grid-template-columns:1fr 1fr;}
+  .stat-value{font-size:1.5rem;}
+  .profile-grid{grid-template-columns:1fr 1fr;}
+  .profile-hero-name{font-size:1.3rem;}
+  .fgrid{grid-template-columns:1fr!important;}
+  .fg.full{grid-column:1/-1;}
+  .rpt-grid{grid-template-columns:1fr;}
+  .period-bar{flex-direction:column;align-items:flex-start;gap:8px;}
+  .license-card{flex-direction:column;}
+  .lc-right{text-align:left;}
+  .tb-right .btn-ghost{display:none;}
+  .pdf-lh{flex-direction:column;gap:10px;}
+  .pdf-rpt-title{text-align:left;}
+  .pdf-sig{grid-template-columns:1fr;}
+  .pg-hdr{flex-direction:column;}
+}
+
+/* Small phones (≤480px) */
+@media(max-width:480px){
+  .stats{grid-template-columns:1fr;}
+  .profile-grid{grid-template-columns:1fr;}
+  .profile-hero{padding:20px;}
+  .card-body{padding:14px;}
+  .modal-body{padding:16px;}
+  .modal-footer{flex-direction:column-reverse;}
+  .modal-footer .btn{width:100%;justify-content:center;}
+  .topbar{height:52px;}
+  .tb-titles h1{font-size:.85rem;}
+}
+</style>
+</head>
+<body>
+
+<div class="toast-wrap" id="toastWrap"></div>
+<div class="sb-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
+
+<div class="shell">
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="sidebar mobile-hidden" id="sidebar">
+  <div class="sb-brand">
+    <div class="sb-brand-name">Verlex Pharmacy</div>
+    <div class="sb-brand-sub">EDPMS Management System</div>
+  </div>
+
+  <nav class="sb-nav">
+    <div class="sb-section">Overview</div>
+    <div class="sb-item active" onclick="nav('dashboard',this);closeSidebar()">
+      <svg class="sb-item-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M0 0h7v7H0V0zm9 0h7v7H9V0zM0 9h7v7H0V9zm9 0h7v7H9V9z" opacity=".5"/><path d="M1 1h5v5H1V1zm8 0h5v5H9V1zM1 10h5v5H1v-5zm8 0h5v5H9v-5z"/></svg>
+      Dashboard
+    </div>
+    <div class="sb-item" onclick="nav('profile',this);closeSidebar()">
+      <svg class="sb-item-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 8a3 3 0 100-6 3 3 0 000 6zm2-3a2 2 0 11-4 0 2 2 0 014 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/></svg>
+      Pharmacy Profile
+    </div>
+    <div class="sb-item" onclick="nav('drugs',this);closeSidebar()">
+      <svg class="sb-item-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M10.5 3.5a2.5 2.5 0 00-5 0V4h5v-.5zm1 0V4H15v10H1V4h3.5v-.5a3.5 3.5 0 117 0zM8.5 8a.5.5 0 00-1 0v1.5H6a.5.5 0 000 1h1.5V12a.5.5 0 001 0v-1.5H10a.5.5 0 000-1H8.5V8z"/></svg>
+      Drug Formulary
+    </div>
+    <div class="sb-item" onclick="nav('prices',this);closeSidebar()">
+      <svg class="sb-item-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M1 3a1 1 0 011-1h12a1 1 0 011 1H1zm7 8a2 2 0 100-4 2 2 0 000 4z"/><path d="M0 5a1 1 0 011-1h14a1 1 0 011 1v8a1 1 0 01-1 1H1a1 1 0 01-1-1V5zm3 4a3 3 0 106 0 3 3 0 00-6 0zm11-3h-1a1 1 0 000 2h1V6zm-1 4a1 1 0 000 2h1v-2h-1zM2 7H1v2h1a1 1 0 000-2zM1 11v2h1a1 1 0 000-2H1z"/></svg>
+      Price Records
+    </div>
+    <div class="sb-item" onclick="nav('stock',this);closeSidebar()">
+      <svg class="sb-item-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M0 2.5A.5.5 0 01.5 2H2a.5.5 0 01.485.379L2.89 4H14.5a.5.5 0 01.485.621l-1.5 6A.5.5 0 0113 11H4a.5.5 0 01-.485-.379L1.61 3H.5a.5.5 0 01-.5-.5zM3.14 5l1.25 5h8.22l1.25-5H3.14zM5 13a1 1 0 100 2 1 1 0 000-2zm-2 1a2 2 0 114 0 2 2 0 01-4 0zm9-1a1 1 0 100 2 1 1 0 000-2zm-2 1a2 2 0 114 0 2 2 0 01-4 0z"/></svg>
+      Stock on Hand
+    </div>
+    <div class="sb-divider"></div>
+    <div class="sb-section">Reports</div>
+    <div class="sb-item" onclick="nav('reports',this);closeSidebar()">
+      <svg class="sb-item-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M5 10.5a.5.5 0 01.5-.5h2a.5.5 0 010 1h-2a.5.5 0 01-.5-.5zm0-2a.5.5 0 01.5-.5h5a.5.5 0 010 1h-5a.5.5 0 01-.5-.5zm0-2a.5.5 0 01.5-.5h5a.5.5 0 010 1h-5a.5.5 0 01-.5-.5zm0-2a.5.5 0 01.5-.5h5a.5.5 0 010 1h-5a.5.5 0 01-.5-.5z"/><path d="M3 0h10a2 2 0 012 2v12a2 2 0 01-2 2H3a2 2 0 01-2-2V2a2 2 0 012-2zm0 1a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V2a1 1 0 00-1-1H3z"/></svg>
+      Generate Report
+    </div>
+    <div class="sb-item" onclick="nav('compliance',this);closeSidebar()">
+      <svg class="sb-item-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M10.97 4.97a.75.75 0 011.07 1.05l-3.99 4.99a.75.75 0 01-1.08.02L4.324 8.384a.75.75 0 111.06-1.06l2.094 2.093 3.473-4.425z"/><path d="M8 15A7 7 0 108 1a7 7 0 000 14zm0 1A8 8 0 118 0a8 8 0 010 16z"/></svg>
+      Compliance
+    </div>
+  </nav>
+
+  <div class="sb-bottom">
+    <div class="deadline-widget">
+      <div class="dw-label">Submission Deadline</div>
+      <div class="dw-val safe" id="dlVal">—</div>
+      <div class="dw-date" id="dlDate">Calculating...</div>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══ MAIN ═══ -->
+<div class="main" id="mainContent">
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="menu-btn" onclick="toggleSidebar()" aria-label="Menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="tb-titles">
+        <h1 id="pgTitle">Dashboard</h1>
+        <p id="pgSub">Overview of your pharmacy EDPMS data</p>
+      </div>
+    </div>
+    <div class="tb-right">
+      <span class="tb-date" id="nowLabel"></span>
+      <button class="btn btn-ghost btn-sm" onclick="om('mDrug')">Add Drug</button>
+      <button class="btn btn-primary btn-sm" onclick="om('mBatch')">Add Batch</button>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="page active" id="pg-dashboard">
+    <div id="dashAlert"></div>
+    <div class="stats" id="dashStats"></div>
+    <div class="dash-grid" style="display:grid;grid-template-columns:1fr 310px;gap:16px;">
+      <div class="card">
+        <div class="card-hdr">
+          <div><div class="card-hdr-title">Recent Price Records</div><div class="card-hdr-sub">Latest entries this month</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="nav('prices',null)">View All</button>
+        </div>
+        <div class="tbl-wrap" id="dashPrices"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div class="card">
+          <div class="card-hdr"><div class="card-hdr-title">Monthly Timeline</div></div>
+          <div class="card-body" id="dashTimeline"></div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><div class="card-hdr-title">Quick Actions</div></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:7px;">
+            <button class="btn btn-ghost" style="justify-content:flex-start" onclick="nav('profile',null)">View Pharmacy Profile</button>
+            <button class="btn btn-ghost" style="justify-content:flex-start" onclick="om('mDrug')">Register New Drug</button>
+            <button class="btn btn-ghost" style="justify-content:flex-start" onclick="om('mBatch')">Add Batch / Delivery</button>
+            <button class="btn btn-ghost" style="justify-content:flex-start" onclick="om('mPrice')">Record Price</button>
+            <button class="btn btn-primary" style="justify-content:flex-start" onclick="nav('reports',null)">Generate Monthly Report</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHARMACY PROFILE -->
+  <div class="page" id="pg-profile">
+    <div class="pg-hdr">
+      <div class="pg-hdr-l"><h2>Pharmacy Profile</h2><p>Official FDA registration details for Verlex Pharmacy</p></div>
+      <span class="badge badge-green" style="font-size:.75rem;padding:6px 12px;">Active License</span>
+    </div>
+
+    <div class="profile-hero">
+      <div class="profile-hero-name">Verlex Pharmacy</div>
+      <div class="profile-hero-sub">DRUGSTORE &nbsp;·&nbsp; NATIONAL CAPITAL REGION</div>
+      <div class="profile-badges">
+        <span class="badge badge-gold">FDA Licensed</span>
+        <span class="badge" style="background:rgba(104,217,160,.15);color:#68d9a0;border:1px solid rgba(104,217,160,.3)">Active</span>
+        <span class="badge" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6)">CDRR-NCR-DS-383345</span>
+      </div>
+    </div>
+
+    <div class="license-card">
+      <div class="lc-left">
+        <h3>License to Operate — LTO Validity</h3>
+        <p>License No. CDRR-NCR-DS-383345 &nbsp;·&nbsp; Issued: June 25, 2024</p>
+      </div>
+      <div class="lc-right">
+        <div class="lc-countdown safe" id="ltoCountdown">—</div>
+        <div class="lc-sub" id="ltoSub">Valid until August 11, 2027</div>
+      </div>
+    </div>
+
+    <div class="profile-grid">
+      <div class="profile-field">
+        <div class="profile-field-label">Establishment Name</div>
+        <div class="profile-field-value">Verlex Pharmacy</div>
+      </div>
+      <div class="profile-field">
+        <div class="profile-field-label">License Number</div>
+        <div class="profile-field-value mono">CDRR-NCR-DS-383345</div>
+      </div>
+      <div class="profile-field">
+        <div class="profile-field-label">Owner / Proprietor</div>
+        <div class="profile-field-value">Alex M. Del Rosario</div>
+      </div>
+      <div class="profile-field">
+        <div class="profile-field-label">Primary Activity</div>
+        <div class="profile-field-value">Drugstore</div>
+      </div>
+      <div class="profile-field">
+        <div class="profile-field-label">Additional Activities</div>
+        <div class="profile-field-value" style="color:var(--ink3)">N/A</div>
+      </div>
+      <div class="profile-field">
+        <div class="profile-field-label">Region</div>
+        <div class="profile-field-value">National Capital Region (NCR)</div>
+      </div>
+      <div class="profile-field" style="grid-column:1/-1">
+        <div class="profile-field-label">Address</div>
+        <div class="profile-field-value">1366 Block 20 Lot 1 Landaska Torcillo St., Kaunlaran Village, Barangay 028, District 2, Caloocan City, Metro Manila</div>
+      </div>
+      <div class="profile-field">
+        <div class="profile-field-label">Issuance Date</div>
+        <div class="profile-field-value mono">June 25, 2024</div>
+      </div>
+      <div class="profile-field">
+        <div class="profile-field-label">Validity Date</div>
+        <div class="profile-field-value mono">August 11, 2027</div>
+      </div>
+      <div class="profile-field">
+        <div class="profile-field-label">License Status</div>
+        <div class="profile-field-value"><span class="badge badge-green">Active</span></div>
+      </div>
+    </div>
+
+    <div class="notice notice-blue">
+      <svg class="notice-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 16A8 8 0 108 0a8 8 0 000 16zm.93-9.412l-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM8 5.5a1 1 0 100-2 1 1 0 000 2z"/></svg>
+      <span>This profile information is for <strong>reference only</strong> and is not included in your monthly EDPMS report submission to FDA/NCPAM. Keep your LTO valid to maintain EDPMS reporting privileges.</span>
+    </div>
+  </div>
+
+  <!-- DRUG FORMULARY -->
+  <div class="page" id="pg-drugs">
+    <div class="pg-hdr">
+      <div class="pg-hdr-l"><h2>Drug Formulary</h2><p>Each drug registered once. Expand a row to view all batches and deliveries.</p></div>
+      <button class="btn btn-primary btn-sm" onclick="om('mDrug')">Add Drug</button>
+    </div>
+    <div class="notice notice-blue">
+      <svg class="notice-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 16A8 8 0 108 0a8 8 0 000 16zm.93-9.412l-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM8 5.5a1 1 0 100-2 1 1 0 000 2z"/></svg>
+      <span><strong>No duplicates needed.</strong> Register each drug once. Every new delivery — regardless of manufacturer — is recorded as a separate <strong>Batch</strong> under that drug.</span>
+    </div>
+    <div class="sbar">
+      <div class="sbar-wrap">
+        <svg class="sbar-icon" width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M11.742 10.344a6.5 6.5 0 10-1.397 1.398l3.85 3.85a1 1 0 001.415-1.414l-3.868-3.834zm-5.242 1.656a5.5 5.5 0 110-11 5.5 5.5 0 010 11z"/></svg>
+        <input class="sinput" id="drugQ" placeholder="Search drugs..." oninput="renderDrugs()">
+      </div>
+    </div>
+    <div class="card"><div class="tbl-wrap" id="drugsCard"></div></div>
+  </div>
+
+  <!-- PRICE RECORDS -->
+  <div class="page" id="pg-prices">
+    <div class="pg-hdr">
+      <div class="pg-hdr-l"><h2>Price Records</h2><p>Purchase and selling prices per batch, per month</p></div>
+      <button class="btn btn-primary btn-sm" onclick="om('mPrice')">Record Price</button>
+    </div>
+    <div class="sbar">
+      <div class="sbar-wrap">
+        <svg class="sbar-icon" width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M11.742 10.344a6.5 6.5 0 10-1.397 1.398l3.85 3.85a1 1 0 001.415-1.414l-3.868-3.834zm-5.242 1.656a5.5 5.5 0 110-11 5.5 5.5 0 010 11z"/></svg>
+        <input class="sinput" id="priceQ" placeholder="Search by drug name or manufacturer..." oninput="renderPrices()">
+      </div>
+    </div>
+    <div class="card"><div class="tbl-wrap" id="pricesCard"></div></div>
+  </div>
+
+  <!-- STOCK -->
+  <div class="page" id="pg-stock">
+    <div class="pg-hdr">
+      <div class="pg-hdr-l"><h2>Stock on Hand</h2><p>Current inventory levels tracked per batch</p></div>
+      <button class="btn btn-primary btn-sm" onclick="om('mStock')">Update Stock</button>
+    </div>
+    <div class="sbar">
+      <div class="sbar-wrap">
+        <svg class="sbar-icon" width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M11.742 10.344a6.5 6.5 0 10-1.397 1.398l3.85 3.85a1 1 0 001.415-1.414l-3.868-3.834zm-5.242 1.656a5.5 5.5 0 110-11 5.5 5.5 0 010 11z"/></svg>
+        <input class="sinput" id="stockQ" placeholder="Search..." oninput="renderStock()">
+      </div>
+    </div>
+    <div class="card"><div class="tbl-wrap" id="stockCard"></div></div>
+  </div>
+
+  <!-- REPORTS -->
+  <div class="page" id="pg-reports">
+    <div class="pg-hdr">
+      <div class="pg-hdr-l"><h2>Generate Report</h2><p>Monthly EDPMS report for FDA / NCPAM submission</p></div>
+    </div>
+    <div class="notice notice-blue">
+      <svg class="notice-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 16A8 8 0 108 0a8 8 0 000 16zm.93-9.412l-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM8 5.5a1 1 0 100-2 1 1 0 000 2z"/></svg>
+      <span>Submit within the <strong>first 5 working days</strong> of each month covering <strong>previous month's</strong> data. Each batch appears as a separate row as required by FDA/NCPAM.</span>
+    </div>
+    <div class="period-bar">
+      <label>Reporting Period</label>
+      <select class="fi" id="rptM" style="width:auto;padding:7px 12px;"></select>
+      <select class="fi" id="rptY" style="width:auto;padding:7px 12px;"></select>
+      <button class="btn btn-ghost btn-sm" onclick="previewRpt()">Preview</button>
+    </div>
+    <div class="rpt-grid">
+      <div class="rpt-card" onclick="doExcel()">
+        <div class="rpt-card-hdr">
+          <div class="rpt-icon rpt-icon-green"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--green)"><path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h13.25A2.625 2.625 0 0019.25 16.875V6.623a1.125 1.125 0 00-.33-.795L14.83 1.737A1.125 1.125 0 0014.034 1.5H3.375A2.625 2.625 0 00.75 4.125v12.75A2.625 2.625 0 003.375 19.5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M14.25 1.5v3.375c0 .621.504 1.125 1.125 1.125h3.375M6 12l2.25 2.25L12 9"/></svg></div>
+          <h3>Download Excel (.xlsx)</h3>
+        </div>
+        <p>Export a formatted spreadsheet for FDA/NCPAM submission with all drug batches, pricing, and inventory data.</p>
+        <div class="rpt-btn"><button class="btn btn-primary" style="width:100%">Download Excel File</button></div>
+      </div>
+      <div class="rpt-card" onclick="doPDF()">
+        <div class="rpt-card-hdr">
+          <div class="rpt-icon rpt-icon-blue"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--blue)"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg></div>
+          <h3>Print / Save as PDF</h3>
+        </div>
+        <p>Open a Verlex Pharmacy letterhead report ready for printing, signing, and physical filing.</p>
+        <div class="rpt-btn"><button class="btn btn-blue" style="width:100%">Open PDF View</button></div>
+      </div>
+    </div>
+    <div class="card" id="rptCard" style="display:none;">
+      <div class="card-hdr">
+        <div class="card-hdr-title">Report Preview</div>
+        <div style="display:flex;gap:7px"><button class="btn btn-ghost btn-sm" onclick="doExcel()">Excel</button><button class="btn btn-blue btn-sm" onclick="doPDF()">PDF</button></div>
+      </div>
+      <div class="card-body tbl-wrap" id="rptBody"></div>
+    </div>
+  </div>
+
+  <!-- COMPLIANCE -->
+  <div class="page" id="pg-compliance">
+    <div class="pg-hdr"><div class="pg-hdr-l"><h2>Compliance Status</h2><p>Monitor reporting obligations under DOH AO No. 2011-0012</p></div></div>
+    <div id="compBody"></div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- Add Drug -->
+<div class="modal-bg" id="mDrug">
+  <div class="modal">
+    <div class="modal-hdr"><div><div class="modal-hdr-title">Register Drug to Formulary</div><div class="modal-hdr-sub">Each drug registered once — deliveries tracked as batches</div></div><button class="modal-close" onclick="cm('mDrug')">&#x2715;</button></div>
+    <div class="modal-body">
+      <div class="fgrid">
+        <div class="fg full"><label>Generic Name *</label><input class="fi" id="d-name" placeholder="e.g. Paracetamol"><span class="fi-hint">Enter the generic (non-brand) name</span></div>
+        <div class="fg"><label>Dosage Form *</label><select class="fi" id="d-form"><option value="">Select...</option><option>Tablet</option><option>Capsule</option><option>Syrup</option><option>Suspension</option><option>Injection</option><option>Cream / Ointment</option><option>Drops</option><option>Inhaler</option><option>IV Fluid</option><option>Other</option></select></div>
+        <div class="fg"><label>Strength *</label><input class="fi" id="d-str" placeholder="e.g. 500mg"></div>
+        <div class="fg"><label>Category</label><select class="fi" id="d-cat"><option value="">Select...</option><option>PNDF Essential Drug</option><option>Chronic Illness</option><option>Infectious Disease</option><option>Vaccine / Immunoglobulin</option><option>Contraceptive</option><option>Anesthetic</option><option>IV Fluid</option><option>Other</option></select></div>
+        <div class="fg"><label>MDRP Ceiling (₱)</label><input class="fi" type="number" id="d-mdrp" placeholder="0.00" step="0.01"><span class="fi-hint">Maximum Drug Retail Price</span></div>
+        <div class="fg"><label>GMAP Price (₱)</label><input class="fi" type="number" id="d-gmap" placeholder="0.00" step="0.01"><span class="fi-hint">Government Mediated Access Price</span></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="cm('mDrug')">Cancel</button><button class="btn btn-primary" onclick="saveDrug()">Register Drug</button></div>
+  </div>
+</div>
+
+<!-- Add Batch -->
+<div class="modal-bg" id="mBatch">
+  <div class="modal">
+    <div class="modal-hdr"><div><div class="modal-hdr-title">Record Batch / Delivery</div><div class="modal-hdr-sub">Different manufacturers are supported per batch</div></div><button class="modal-close" onclick="cm('mBatch')">&#x2715;</button></div>
+    <div class="modal-body">
+      <div class="fgrid">
+        <div class="fg full"><label>Drug *</label><select class="fi" id="b-drug"><option value="">Select drug...</option></select></div>
+        <div class="form-sep">Supplier / Manufacturer Details</div>
+        <div class="fg"><label>Manufacturer *</label><input class="fi" id="b-mfr" placeholder="e.g. Philpharma, Unilab..."></div>
+        <div class="fg"><label>Packaging</label><input class="fi" id="b-pack" placeholder="e.g. 10 tablets / blister"></div>
+        <div class="fg"><label>Lot Number</label><input class="fi" id="b-lot" placeholder="e.g. LOT-2024-001"></div>
+        <div class="fg"><label>Expiry Date</label><input class="fi" type="date" id="b-exp"></div>
+        <div class="fg"><label>Date Received</label><input class="fi" type="date" id="b-rec"></div>
+        <div class="fg"><label>Initial Stock (units)</label><input class="fi" type="number" id="b-stk" placeholder="0" min="0"></div>
+        <div class="fg"><label>Low Stock Threshold</label><input class="fi" type="number" id="b-thr" placeholder="e.g. 20" min="0"></div>
+        <div class="form-sep">Initial Pricing</div>
+        <div class="fg"><label>Purchase Price (₱)</label><input class="fi" type="number" id="b-pp" placeholder="0.00" step="0.01"></div>
+        <div class="fg"><label>Selling Price (₱)</label><input class="fi" type="number" id="b-sp" placeholder="0.00" step="0.01"></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="cm('mBatch')">Cancel</button><button class="btn btn-primary" onclick="saveBatch()">Save Batch</button></div>
+  </div>
+</div>
+
+<!-- Record Price -->
+<div class="modal-bg" id="mPrice">
+  <div class="modal">
+    <div class="modal-hdr"><div><div class="modal-hdr-title">Record Price Transaction</div><div class="modal-hdr-sub">Log the latest price for a specific batch</div></div><button class="modal-close" onclick="cm('mPrice')">&#x2715;</button></div>
+    <div class="modal-body">
+      <div class="fgrid">
+        <div class="fg full"><label>Drug *</label><select class="fi" id="p-drug" onchange="pBatches()"><option value="">Select drug...</option></select></div>
+        <div class="fg full"><label>Batch *</label><select class="fi" id="p-batch"><option value="">Select batch...</option></select></div>
+        <div class="fg"><label>Transaction Date *</label><input class="fi" type="date" id="p-date"></div>
+        <div class="fg"><label>Type</label><select class="fi" id="p-type"><option value="both">Both Purchase & Selling</option><option value="purchase">Purchase Only</option><option value="selling">Selling Only</option></select></div>
+        <div class="fg"><label>Purchase Price (₱)</label><input class="fi" type="number" id="p-pp" placeholder="0.00" step="0.01"></div>
+        <div class="fg"><label>Selling Price (₱)</label><input class="fi" type="number" id="p-sp" placeholder="0.00" step="0.01"></div>
+        <div class="fg full"><label>Notes</label><input class="fi" id="p-notes" placeholder="Optional remarks"></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="cm('mPrice')">Cancel</button><button class="btn btn-primary" onclick="savePrice()">Save Record</button></div>
+  </div>
+</div>
+
+<!-- Update Stock -->
+<div class="modal-bg" id="mStock">
+  <div class="modal">
+    <div class="modal-hdr"><div class="modal-hdr-title">Update Stock on Hand</div><button class="modal-close" onclick="cm('mStock')">&#x2715;</button></div>
+    <div class="modal-body">
+      <div class="fgrid">
+        <div class="fg full"><label>Drug *</label><select class="fi" id="s-drug" onchange="sBatches()"><option value="">Select drug...</option></select></div>
+        <div class="fg full"><label>Batch *</label><select class="fi" id="s-batch"><option value="">Select batch...</option></select></div>
+        <div class="fg"><label>Stock on Hand (units) *</label><input class="fi" type="number" id="s-qty" placeholder="0" min="0"></div>
+        <div class="fg"><label>Low Stock Threshold</label><input class="fi" type="number" id="s-thr" placeholder="e.g. 20" min="0"></div>
+        <div class="fg full"><label>Date</label><input class="fi" type="date" id="s-date"></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="cm('mStock')">Cancel</button><button class="btn btn-primary" onclick="saveStock()">Update Stock</button></div>
+  </div>
+</div>
+
+<!-- PDF Modal -->
+<div class="modal-bg" id="mPDF">
+  <div class="modal modal-wide">
+    <div class="modal-hdr"><div class="modal-hdr-title">Print / Save as PDF</div><button class="modal-close" onclick="cm('mPDF')">&#x2715;</button></div>
+    <div class="modal-body" id="pdfBody"></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="cm('mPDF')">Close</button><button class="btn btn-blue" onclick="window.print()">Print / Save as PDF</button></div>
+  </div>
+</div>
+
+<script>
+// DATA
+let drugs   = JSON.parse(localStorage.getItem('vx_drugs')   || '[]');
+let batches = JSON.parse(localStorage.getItem('vx_batches') || '[]');
+let prices  = JSON.parse(localStorage.getItem('vx_prices')  || '[]');
+const uid = () => '_' + Math.random().toString(36).slice(2,9) + Date.now().toString(36);
+const MN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+function save() { localStorage.setItem('vx_drugs',JSON.stringify(drugs)); localStorage.setItem('vx_batches',JSON.stringify(batches)); localStorage.setItem('vx_prices',JSON.stringify(prices)); }
+
+// SIDEBAR MOBILE
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sbOverlay');
+  sb.classList.toggle('open');
+  sb.classList.toggle('mobile-hidden');
+  ov.classList.toggle('show');
+}
+function closeSidebar() {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sbOverlay');
+  if (window.innerWidth <= 768) {
+    sb.classList.remove('open');
+    sb.classList.add('mobile-hidden');
+    ov.classList.remove('show');
+  }
+}
+// On desktop, show sidebar always
+function handleResize() {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sbOverlay');
+  if (window.innerWidth > 768) {
+    sb.classList.remove('mobile-hidden','open');
+    ov.classList.remove('show');
+    document.getElementById('mainContent').style.marginLeft = 'var(--sidebar-w)';
+  } else {
+    if (!sb.classList.contains('open')) sb.classList.add('mobile-hidden');
+    document.getElementById('mainContent').style.marginLeft = '0';
+  }
+}
+window.addEventListener('resize', handleResize);
+handleResize();
+
+// NAV
+const PM = {
+  dashboard:  ['Dashboard',        'Overview of Verlex Pharmacy EDPMS data'],
+  profile:    ['Pharmacy Profile', 'Official FDA registration details'],
+  drugs:      ['Drug Formulary',   'Registered drugs — batches track each delivery'],
+  prices:     ['Price Records',    'Purchase and selling prices per batch'],
+  stock:      ['Stock on Hand',    'Current inventory levels per batch'],
+  reports:    ['Generate Report',  'Monthly EDPMS report for FDA / NCPAM'],
+  compliance: ['Compliance Status','Monitor reporting obligations — DOH AO No. 2011-0012'],
+};
+function nav(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  document.getElementById('pg-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+  else document.querySelectorAll('.sb-item').forEach(i => { if (i.textContent.toLowerCase().includes(name === 'drugs' ? 'formulary' : name === 'profile' ? 'profile' : name)) i.classList.add('active'); });
+  document.getElementById('pgTitle').textContent = PM[name][0];
+  document.getElementById('pgSub').textContent   = PM[name][1];
+  window.scrollTo(0, 0);
+  if (name === 'dashboard')  renderDash();
+  if (name === 'drugs')      renderDrugs();
+  if (name === 'prices')     renderPrices();
+  if (name === 'stock')      renderStock();
+  if (name === 'compliance') renderComp();
+  if (name === 'reports')    setupRpt();
+  if (name === 'profile')    renderLTO();
+}
+
+// DEADLINE
+function getDL() {
+  const now = new Date(); let wd = 0, d;
+  for (let i = 1; i <= 31; i++) { d = new Date(now.getFullYear(), now.getMonth(), i); if (d.getMonth() !== now.getMonth()) break; if (d.getDay() !== 0 && d.getDay() !== 6) { wd++; if (wd === 5) break; } }
+  const t = new Date(); t.setHours(0,0,0,0); d.setHours(0,0,0,0);
+  return { date: d, diff: Math.ceil((d - t) / 86400000) };
+}
+function updateDL() {
+  const { date, diff } = getDL();
+  const v = document.getElementById('dlVal'), s = document.getElementById('dlDate');
+  s.textContent = MN[date.getMonth()].slice(0,3) + ' ' + date.getDate() + ', ' + date.getFullYear();
+  if (diff < 0)        { v.textContent = 'Overdue';      v.className = 'dw-val urgent'; }
+  else if (diff === 0) { v.textContent = 'Today';        v.className = 'dw-val urgent'; }
+  else if (diff <= 3)  { v.textContent = diff + ' days'; v.className = 'dw-val warn'; }
+  else                 { v.textContent = diff + ' days'; v.className = 'dw-val safe'; }
+}
+
+// LTO COUNTDOWN
+function renderLTO() {
+  const expiry = new Date('2027-08-11');
+  const today  = new Date(); today.setHours(0,0,0,0);
+  const days   = Math.ceil((expiry - today) / 86400000);
+  const el = document.getElementById('ltoCountdown');
+  const sub = document.getElementById('ltoSub');
+  if (days < 0) { el.textContent = 'Expired'; el.className = 'lc-countdown urgent'; sub.textContent = 'License has expired — renew immediately'; }
+  else if (days <= 90) { el.textContent = days + ' days'; el.className = 'lc-countdown warn'; sub.textContent = 'Valid until August 11, 2027 — renew soon'; }
+  else { el.textContent = days + ' days'; el.className = 'lc-countdown safe'; sub.textContent = 'Valid until August 11, 2027'; }
+}
+
+// EXPIRY CLASS
+function exCls(ds) { if (!ds) return ''; const diff = (new Date(ds) - new Date()) / 86400000; return diff < 0 ? 'exp-bad' : diff < 90 ? 'exp-warn' : 'exp-ok'; }
+
+// DASHBOARD
+function renderDash() {
+  const now = new Date(), m = now.getMonth(), y = now.getFullYear();
+  const mp   = prices.filter(p => { const d = new Date(p.date); return d.getMonth() === m && d.getFullYear() === y; });
+  const low  = batches.filter(b => b.thr && (b.stk || 0) <= parseInt(b.thr)).length;
+  const viol = prices.filter(p => { const dr = drugs.find(d => d.id === p.drugId); return dr && dr.mdrp && p.sp > parseFloat(dr.mdrp); }).length;
+  document.getElementById('dashStats').innerHTML = `
+    <div class="stat"><div class="stat-label">Registered Drugs</div><div class="stat-value c-blue">${drugs.length}</div><div class="stat-sub">In formulary</div></div>
+    <div class="stat"><div class="stat-label">Active Batches</div><div class="stat-value c-green">${batches.length}</div><div class="stat-sub">Total deliveries</div></div>
+    <div class="stat"><div class="stat-label">Low Stock Alerts</div><div class="stat-value c-amber">${low}</div><div class="stat-sub">Below threshold</div></div>
+    <div class="stat"><div class="stat-label">MDRP Violations</div><div class="stat-value c-red">${viol}</div><div class="stat-sub">Prices over ceiling</div></div>`;
+  const { diff } = getDL();
+  const prev = m === 0 ? 11 : m - 1;
+  const al = document.getElementById('dashAlert');
+  if (diff < 0) al.innerHTML = `<div class="notice notice-red"><svg class="notice-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8.982 1.566a1.13 1.13 0 00-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 01-1.1 0L7.1 5.995A.905.905 0 018 5zm.002 6a1 1 0 110 2 1 1 0 010-2z"/></svg><span>Submission deadline has <strong>passed.</strong> Submit your <strong>${MN[prev]}</strong> report to FDA/NCPAM immediately.</span></div>`;
+  else if (diff <= 3) al.innerHTML = `<div class="notice notice-amber"><svg class="notice-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8.982 1.566a1.13 1.13 0 00-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 01-1.1 0L7.1 5.995A.905.905 0 018 5zm.002 6a1 1 0 110 2 1 1 0 010-2z"/></svg><span>Deadline in <strong>${diff} day(s).</strong> Submit your <strong>${MN[prev]}</strong> report to FDA/NCPAM soon.</span></div>`;
+  else al.innerHTML = `<div class="notice notice-green"><svg class="notice-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M10.97 4.97a.75.75 0 011.07 1.05l-3.99 4.99a.75.75 0 01-1.08.02L4.324 8.384a.75.75 0 111.06-1.06l2.094 2.093 3.473-4.425z"/><path d="M8 15A7 7 0 108 1a7 7 0 000 14zm0 1A8 8 0 118 0a8 8 0 010 16z"/></svg><span><strong>${diff} days</strong> remaining until the next submission deadline.</span></div>`;
+  const recent = [...prices].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 7);
+  const dp = document.getElementById('dashPrices');
+  if (!recent.length) { dp.innerHTML = `<div class="empty"><svg class="empty-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg><h3>No price records found</h3><p>Add batches and record prices to get started.</p></div>`; return; }
+  dp.innerHTML = `<table class="tbl"><thead><tr><th>Drug</th><th>Manufacturer</th><th>Date</th><th>Purchase</th><th>Selling</th><th>Status</th></tr></thead><tbody>${recent.map(p => { const dr = drugs.find(d => d.id === p.drugId); const b = batches.find(b => b.id === p.batchId); const vl = dr && dr.mdrp && p.sp > parseFloat(dr.mdrp); return `<tr><td class="pk">${dr?.name || '—'} <span style="font-weight:400;color:var(--ink3)">${dr?.str || ''}</span></td><td>${b?.mfr || '—'}</td><td class="mono">${p.date}</td><td class="mono">₱${(p.pp || 0).toFixed(2)}</td><td class="mono" style="${vl ? 'color:var(--red);font-weight:700' : ''}">₱${(p.sp || 0).toFixed(2)}</td><td>${vl ? '<span class="badge badge-red">EXCEEDED</span>' : '<span class="badge badge-green">OK</span>'}</td></tr>`; }).join('')}</tbody></table>`;
+  document.getElementById('dashTimeline').innerHTML = [
+    { t: 'Record Monthly Transactions', d: 'Throughout the reporting month', state: 'done' },
+    { t: 'Submit Data to EDPMS',        d: 'First 5 working days · ' + (diff > 0 ? diff + ' days remaining' : 'Overdue'), state: diff > 0 ? (diff <= 3 ? 'active' : 'done') : 'late' },
+    { t: 'CHD Data Validation',         d: '5 working days after submission', state: '' },
+    { t: 'NCPAM Report Release',        d: '3rd week of the month', state: '' },
+  ].map(i => `<div class="tl-item"><div class="tl-dot ${i.state}"></div><div class="tl-t"><h4>${i.t}</h4><p>${i.d}</p></div></div>`).join('');
+  document.getElementById('nowLabel').textContent = MN[m] + ' ' + y;
+}
+
+// DRUG FORMULARY
+function renderDrugs() {
+  const q = (document.getElementById('drugQ')?.value || '').toLowerCase();
+  const f = drugs.filter(d => d.name.toLowerCase().includes(q));
+  const w = document.getElementById('drugsCard');
+  if (!f.length) { w.innerHTML = `<div class="empty"><h3>${drugs.length ? 'No results' : 'No drugs registered'}</h3><p>${drugs.length ? 'Try a different search.' : 'Click "Add Drug" to register your first drug.'}</p></div>`; return; }
+  w.innerHTML = `<table class="tbl"><thead><tr><th style="width:32px"></th><th>Generic Name</th><th>Form</th><th>Strength</th><th>Category</th><th>MDRP</th><th>Batches</th><th></th></tr></thead><tbody id="dTbody"></tbody></table>`;
+  const tb = document.getElementById('dTbody');
+  f.forEach(drug => {
+    const mb = batches.filter(b => b.drugId === drug.id);
+    const tr = document.createElement('tr'); tr.className = 'drug-row';
+    tr.innerHTML = `<td><span class="expand-arrow" id="arr-${drug.id}"></span></td><td class="pk">${drug.name}</td><td><span class="badge badge-navy">${drug.form || '—'}</span></td><td class="mono">${drug.str || '—'}</td><td>${drug.cat ? `<span class="badge badge-blue">${drug.cat}</span>` : '—'}</td><td class="mono">${drug.mdrp ? '₱' + parseFloat(drug.mdrp).toFixed(2) : '—'}</td><td><span class="badge badge-green">${mb.length} batch${mb.length !== 1 ? 'es' : ''}</span></td><td style="white-space:nowrap"><button class="btn btn-warn btn-xs" onclick="event.stopPropagation();bFor('${drug.id}')">Add Batch</button> <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();delDrug('${drug.id}')">Remove</button></td>`;
+    tr.onclick = () => togBatch(drug.id); tb.appendChild(tr);
+    const bs = document.createElement('tbody'); bs.id = 'bs-' + drug.id; bs.className = 'batch-tbody';
+    const hdr = document.createElement('tr');
+    ['colspan:2:Manufacturer','Lot No.','Packaging','Expiry','Stock','Received',''].forEach((h, i) => { const td = document.createElement('td'); if (i === 0) { td.colSpan = 2; td.textContent = 'Manufacturer'; td.style.paddingLeft = '40px'; } else td.textContent = h; td.style.cssText = 'background:#f0f3f9!important;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);padding:6px 14px;border-bottom:1px solid var(--border);'; hdr.appendChild(td); });
+    bs.appendChild(hdr);
+    if (mb.length) {
+      mb.forEach((b, i) => { const low = b.thr && (b.stk || 0) <= parseInt(b.thr); const r = document.createElement('tr'); r.className = 'batch-row'; r.innerHTML = `<td colspan="2" style="padding-left:40px"><span style="font-size:.71rem;color:var(--ink3);margin-right:6px">Batch ${i+1}</span><strong>${b.mfr}</strong></td><td class="mono">${b.lot || '—'}</td><td>${b.pack || '—'}</td><td class="mono ${exCls(b.exp)}">${b.exp || '—'}</td><td><span style="font-weight:600;color:${low ? 'var(--red)' : 'var(--green)'}">${b.stk !== undefined ? b.stk : '—'} units</span>${b.thr ? ` <span style="color:var(--ink3);font-size:.67rem">/ min ${b.thr}</span>` : ''}</td><td class="mono">${b.rec || '—'}</td><td style="white-space:nowrap"><button class="btn btn-ghost btn-xs" onclick="editStk('${b.id}')">Stock</button> <button class="btn btn-danger btn-xs" onclick="delBatch('${b.id}')">Remove</button></td>`; bs.appendChild(r); });
+    } else { const r = document.createElement('tr'); r.className = 'batch-row'; r.innerHTML = `<td colspan="8" style="padding-left:40px;color:var(--ink3);font-style:italic">No batches recorded — <a href="#" style="color:var(--blue);text-decoration:none;font-style:normal" onclick="event.preventDefault();bFor('${drug.id}')">Add first batch</a></td>`; bs.appendChild(r); }
+    tb.appendChild(bs);
+  });
+}
+function togBatch(id) { const bs = document.getElementById('bs-'+id); const ar = document.getElementById('arr-'+id); bs?.classList.toggle('open'); if(ar) ar.classList.toggle('open'); }
+function bFor(drugId) { om('mBatch'); setTimeout(() => { document.getElementById('b-drug').value = drugId; }, 60); }
+function delDrug(id) { if (!confirm('Remove this drug and all associated batches and price records?')) return; drugs = drugs.filter(d => d.id !== id); batches = batches.filter(b => b.drugId !== id); prices = prices.filter(p => p.drugId !== id); save(); renderDrugs(); renderDash(); toast('Drug removed.', 'ok'); }
+function delBatch(id) { if (!confirm('Remove this batch and its price records?')) return; batches = batches.filter(b => b.id !== id); prices = prices.filter(p => p.batchId !== id); save(); renderDrugs(); renderDash(); toast('Batch removed.', 'ok'); }
+
+// PRICES
+function renderPrices() {
+  const q = (document.getElementById('priceQ')?.value || '').toLowerCase();
+  const f = [...prices].sort((a,b) => new Date(b.date) - new Date(a.date)).filter(p => { const dr = drugs.find(d => d.id === p.drugId); const b = batches.find(b => b.id === p.batchId); return (dr?.name || '').toLowerCase().includes(q) || (b?.mfr || '').toLowerCase().includes(q); });
+  const w = document.getElementById('pricesCard');
+  if (!f.length) { w.innerHTML = `<div class="empty"><h3>${prices.length ? 'No results' : 'No price records'}</h3><p>${prices.length ? 'Try a different search.' : 'Add batches and record prices.'}</p></div>`; return; }
+  w.innerHTML = `<table class="tbl"><thead><tr><th>Drug</th><th>Manufacturer</th><th>Lot No.</th><th>Date</th><th>Purchase ₱</th><th>Selling ₱</th><th>MDRP Status</th><th></th></tr></thead><tbody>${f.map(p => { const dr = drugs.find(d => d.id === p.drugId); const b = batches.find(b => b.id === p.batchId); const vl = dr && dr.mdrp && p.sp > parseFloat(dr.mdrp); return `<tr><td class="pk">${dr?.name || '?'} <span style="font-weight:400;color:var(--ink3)">${dr?.str || ''}</span></td><td>${b?.mfr || '—'}</td><td class="mono">${b?.lot || '—'}</td><td class="mono">${p.date}</td><td class="mono">₱${(p.pp || 0).toFixed(2)}</td><td class="mono" style="${vl ? 'color:var(--red);font-weight:700' : ''}">₱${(p.sp || 0).toFixed(2)}</td><td>${dr?.mdrp ? (vl ? '<span class="badge badge-red">EXCEEDED</span>' : '<span class="badge badge-green">Within Limit</span>') : '<span class="badge badge-gray">N/A</span>'}</td><td><button class="btn btn-danger btn-xs" onclick="delP('${p.id}')">Remove</button></td></tr>`; }).join('')}</tbody></table>`;
+}
+function delP(id) { prices = prices.filter(p => p.id !== id); save(); renderPrices(); renderDash(); toast('Record removed.', 'ok'); }
+
+// STOCK
+function renderStock() {
+  const q = (document.getElementById('stockQ')?.value || '').toLowerCase();
+  const f = batches.filter(b => { const dr = drugs.find(d => d.id === b.drugId); return (dr?.name || '').toLowerCase().includes(q) || (b.mfr || '').toLowerCase().includes(q); });
+  const w = document.getElementById('stockCard');
+  if (!f.length) { w.innerHTML = `<div class="empty"><h3>${batches.length ? 'No results' : 'No batches on record'}</h3><p>Add batches to begin tracking stock.</p></div>`; return; }
+  w.innerHTML = `<table class="tbl"><thead><tr><th>Drug</th><th>Manufacturer</th><th>Lot No.</th><th>Expiry</th><th>Stock on Hand</th><th>Threshold</th><th>Status</th><th>Updated</th><th></th></tr></thead><tbody>${f.map(b => { const dr = drugs.find(d => d.id === b.drugId); const low = b.thr && (b.stk || 0) <= parseInt(b.thr); const pct = b.thr ? Math.min(100, ((b.stk || 0) / parseInt(b.thr)) * 100) : 100; return `<tr><td class="pk">${dr?.name || '?'} <span style="color:var(--ink3);font-weight:400">${dr?.str || ''}</span></td><td>${b.mfr}</td><td class="mono">${b.lot || '—'}</td><td class="mono ${exCls(b.exp)}">${b.exp || '—'}</td><td><span style="font-weight:600;color:${low ? 'var(--red)' : 'var(--green)'}">${b.stk !== undefined ? b.stk : '—'} units</span>${b.thr ? `<div style="height:3px;background:var(--border2);border-radius:2px;margin-top:3px;width:64px"><div style="height:100%;border-radius:2px;background:${low ? 'var(--red)' : pct < 60 ? 'var(--amber)' : 'var(--green)'};width:${pct}%"></div></div>` : ''}</td><td class="mono">${b.thr || '—'}</td><td>${low ? '<span class="badge badge-red">Low Stock</span>' : '<span class="badge badge-green">Adequate</span>'}</td><td class="mono">${b.stkDate || '—'}</td><td><button class="btn btn-ghost btn-xs" onclick="editStk('${b.id}')">Update</button></td></tr>`; }).join('')}</tbody></table>`;
+}
+function editStk(id) { om('mStock'); const b = batches.find(x => x.id === id); if (!b) return; setTimeout(() => { document.getElementById('s-drug').value = b.drugId; sBatches(); setTimeout(() => { document.getElementById('s-batch').value = id; document.getElementById('s-qty').value = b.stk || ''; document.getElementById('s-thr').value = b.thr || ''; }, 60); }, 60); }
+
+// COMPLIANCE
+function renderComp() {
+  const now = new Date(), m = now.getMonth(), y = now.getFullYear();
+  const { diff } = getDL();
+  const hist = [];
+  for (let i = 0; i < 3; i++) { const mm = (m - i + 12) % 12; const yy = m - i < 0 ? y - 1 : y; const cnt = prices.filter(p => { const d = new Date(p.date); return d.getMonth() === mm && d.getFullYear() === yy; }).length; hist.push({ label: MN[mm] + ' ' + yy, cnt }); }
+  const checks = [['Drugs registered in formulary', drugs.length > 0], ['Batches on record', batches.length > 0], ['Price records this month', prices.filter(p => { const d = new Date(p.date); return d.getMonth() === m && d.getFullYear() === y; }).length > 0], ['No MDRP violations', !prices.some(p => { const dr = drugs.find(d => d.id === p.drugId); return dr && dr.mdrp && p.sp > parseFloat(dr.mdrp); })], ['Within submission window', diff >= 0]];
+  document.getElementById('compBody').innerHTML = `<div class="comp-grid"><div class="card"><div class="card-hdr"><div class="card-hdr-title">Submission History</div></div><div class="card-body">${hist.map(h => `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border2)"><span style="font-size:.84rem;font-weight:600">${h.label}</span>${h.cnt > 0 ? `<span class="badge badge-green">${h.cnt} records</span>` : '<span class="badge badge-red">No records</span>'}</div>`).join('')}</div></div><div class="card"><div class="card-hdr"><div class="card-hdr-title">Compliance Checklist</div></div><div class="card-body">${checks.map(([l, ok]) => `<div class="chk-item ${ok ? 'pass' : 'fail'}"><svg class="chk-icon" viewBox="0 0 16 16" fill="currentColor">${ok ? '<path d="M10.97 4.97a.75.75 0 011.07 1.05l-3.99 4.99a.75.75 0 01-1.08.02L4.324 8.384a.75.75 0 111.06-1.06l2.094 2.093 3.473-4.425z"/><path d="M8 15A7 7 0 108 1a7 7 0 000 14zm0 1A8 8 0 118 0a8 8 0 010 16z"/>' : '<path d="M4.646 4.646a.5.5 0 01.708 0L8 7.293l2.646-2.647a.5.5 0 01.708.708L8.707 8l2.647 2.646a.5.5 0 01-.708.708L8 8.707l-2.646 2.647a.5.5 0 01-.708-.708L7.293 8 4.646 5.354a.5.5 0 010-.708z"/><path d="M8 15A7 7 0 108 1a7 7 0 000 14zm0 1A8 8 0 118 0a8 8 0 010 16z"/>'}}</svg><span class="chk-label">${l}</span><span class="badge ${ok ? 'badge-green' : 'badge-red'}">${ok ? 'Compliant' : 'Action Required'}</span></div>`).join('')}</div></div></div><div class="card" style="margin-top:14px"><div class="card-hdr"><div class="card-hdr-title">Penalty Schedule — RA 9502 IRR Chapter XIV</div></div><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Violation</th><th>Penalty</th><th>Additional Sanctions</th></tr></thead><tbody><tr><td>1st Offense</td><td><span class="badge badge-green">Written Warning</span></td><td>—</td></tr><tr><td>2nd Offense</td><td><span class="badge badge-amber">₱10,000 – ₱50,000</span></td><td>Product recall (if applicable)</td></tr><tr><td>3rd Offense</td><td><span class="badge badge-red">₱60,000 – ₱150,000</span></td><td>Product recall + CPR suspension</td></tr><tr><td>4th Offense</td><td><span class="badge badge-red">₱200,000 – ₱500,000</span></td><td>LTO suspension (maximum 1 year)</td></tr><tr><td>5th & Beyond</td><td><span class="badge badge-red">₱1,000,000</span></td><td>LTO revocation + blacklisting + ₱2,500/day</td></tr></tbody></table></div></div>`;
+}
+
+// MODALS
+function om(id) {
+  if (id === 'mBatch') { document.getElementById('b-drug').innerHTML = '<option value="">Select drug...</option>' + drugs.map(d => `<option value="${d.id}">${d.name} ${d.str || ''}</option>`).join(''); document.getElementById('b-rec').value = new Date().toISOString().split('T')[0]; ['b-mfr','b-pack','b-lot','b-stk','b-thr','b-pp','b-sp'].forEach(i => { const el = document.getElementById(i); if (el) el.value = ''; }); document.getElementById('b-exp').value = ''; }
+  if (id === 'mPrice') { document.getElementById('p-drug').innerHTML = '<option value="">Select drug...</option>' + drugs.map(d => `<option value="${d.id}">${d.name} ${d.str || ''}</option>`).join(''); document.getElementById('p-batch').innerHTML = '<option value="">Select batch...</option>'; document.getElementById('p-date').value = new Date().toISOString().split('T')[0]; ['p-pp','p-sp','p-notes'].forEach(i => { const el = document.getElementById(i); if (el) el.value = ''; }); }
+  if (id === 'mStock') { document.getElementById('s-drug').innerHTML = '<option value="">Select drug...</option>' + drugs.map(d => `<option value="${d.id}">${d.name} ${d.str || ''}</option>`).join(''); document.getElementById('s-batch').innerHTML = '<option value="">Select batch...</option>'; document.getElementById('s-date').value = new Date().toISOString().split('T')[0]; ['s-qty','s-thr'].forEach(i => { const el = document.getElementById(i); if (el) el.value = ''; }); }
+  document.getElementById(id).classList.add('open');
+}
+function cm(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(bg => bg.addEventListener('click', e => { if (e.target === bg) cm(bg.id); }));
+function pBatches() { const id = document.getElementById('p-drug').value; document.getElementById('p-batch').innerHTML = '<option value="">Select batch...</option>' + batches.filter(b => b.drugId === id).map(b => `<option value="${b.id}">${b.mfr}${b.lot ? ' — ' + b.lot : ''}</option>`).join(''); }
+function sBatches() { const id = document.getElementById('s-drug').value; document.getElementById('s-batch').innerHTML = '<option value="">Select batch...</option>' + batches.filter(b => b.drugId === id).map(b => `<option value="${b.id}">${b.mfr}${b.lot ? ' — ' + b.lot : ''}</option>`).join(''); }
+
+// SAVE
+function saveDrug() {
+  const name = document.getElementById('d-name').value.trim(), form = document.getElementById('d-form').value;
+  if (!name || !form) { toast('Generic name and dosage form are required.', 'err'); return; }
+  drugs.push({ id: uid(), name, form, str: document.getElementById('d-str').value.trim(), cat: document.getElementById('d-cat').value, mdrp: document.getElementById('d-mdrp').value, gmap: document.getElementById('d-gmap').value });
+  save(); cm('mDrug'); renderDrugs(); renderDash();
+  ['d-name','d-str','d-mdrp','d-gmap'].forEach(i => document.getElementById(i).value = ''); document.getElementById('d-form').value = ''; document.getElementById('d-cat').value = '';
+  toast('Drug registered to formulary.', 'ok');
+}
+function saveBatch() {
+  const drugId = document.getElementById('b-drug').value, mfr = document.getElementById('b-mfr').value.trim();
+  if (!drugId || !mfr) { toast('Drug and manufacturer are required.', 'err'); return; }
+  const sp = parseFloat(document.getElementById('b-sp').value) || 0;
+  const dr = drugs.find(d => d.id === drugId);
+  if (dr && dr.mdrp && sp > parseFloat(dr.mdrp)) { if (!confirm(`Selling price ₱${sp.toFixed(2)} exceeds the MDRP ceiling of ₱${parseFloat(dr.mdrp).toFixed(2)}. Proceed?`)) return; }
+  const batch = { id: uid(), drugId, mfr, pack: document.getElementById('b-pack').value.trim(), lot: document.getElementById('b-lot').value.trim(), exp: document.getElementById('b-exp').value, rec: document.getElementById('b-rec').value, stk: parseInt(document.getElementById('b-stk').value) || 0, thr: document.getElementById('b-thr').value || null, stkDate: document.getElementById('b-rec').value };
+  batches.push(batch);
+  const pp = parseFloat(document.getElementById('b-pp').value) || 0;
+  if (pp || sp) prices.push({ id: uid(), drugId, batchId: batch.id, date: batch.rec || new Date().toISOString().split('T')[0], pp, sp });
+  save(); cm('mBatch'); renderDrugs(); renderDash(); toast('Batch recorded.', 'ok');
+}
+function savePrice() {
+  const drugId = document.getElementById('p-drug').value, batchId = document.getElementById('p-batch').value, date = document.getElementById('p-date').value;
+  if (!drugId || !batchId || !date) { toast('Drug, batch, and date are required.', 'err'); return; }
+  const sp = parseFloat(document.getElementById('p-sp').value) || 0;
+  const dr = drugs.find(d => d.id === drugId);
+  if (dr && dr.mdrp && sp > parseFloat(dr.mdrp)) { if (!confirm(`Selling price ₱${sp.toFixed(2)} exceeds MDRP ₱${parseFloat(dr.mdrp).toFixed(2)}. Proceed?`)) return; }
+  prices.push({ id: uid(), drugId, batchId, date, pp: parseFloat(document.getElementById('p-pp').value) || 0, sp, notes: document.getElementById('p-notes').value });
+  save(); cm('mPrice'); renderPrices(); renderDash(); toast('Price record saved.', 'ok');
+}
+function saveStock() {
+  const batchId = document.getElementById('s-batch').value, qty = document.getElementById('s-qty').value;
+  if (!batchId || qty === '') { toast('Batch and quantity are required.', 'err'); return; }
+  const i = batches.findIndex(b => b.id === batchId);
+  if (i > -1) { batches[i].stk = parseInt(qty); batches[i].thr = document.getElementById('s-thr').value || null; batches[i].stkDate = document.getElementById('s-date').value; }
+  save(); cm('mStock'); renderStock(); renderDash(); toast('Stock updated.', 'ok');
+}
+
+// REPORTS
+function setupRpt() {
+  const now = new Date(), m = now.getMonth(), y = now.getFullYear();
+  const ms = document.getElementById('rptM'), ys = document.getElementById('rptY');
+  if (!ms || ms.options.length > 1) return;
+  ms.innerHTML = MN.map((mn, i) => `<option value="${i}" ${i === m ? 'selected' : ''}>${mn}</option>`).join('');
+  ys.innerHTML = [y - 1, y].map(yr => `<option value="${yr}" ${yr === y ? 'selected' : ''}>${yr}</option>`).join('');
+}
+function getRptRows(month, year) {
+  const mp = prices.filter(p => { const d = new Date(p.date); return d.getMonth() === month && d.getFullYear() === year; });
+  const rows = [];
+  drugs.forEach(drug => { batches.filter(b => b.drugId === drug.id).forEach(batch => { const p = [...mp.filter(pr => pr.batchId === batch.id)].sort((a, b) => new Date(b.date) - new Date(a.date))[0]; rows.push({ gn: drug.name, form: drug.form || '', str: drug.str || '', mfr: batch.mfr, pack: batch.pack || '', lot: batch.lot || '', exp: batch.exp || '', pp: p ? p.pp.toFixed(2) : '', sp: p ? p.sp.toFixed(2) : '', stk: batch.stk !== undefined ? batch.stk : '', mdrp: drug.mdrp || '', gmap: drug.gmap || '', status: p && drug.mdrp && p.sp > parseFloat(drug.mdrp) ? 'EXCEEDED' : 'OK' }); }); });
+  return rows;
+}
+function buildPDF(rows, month, year) {
+  return `<div class="pdf-sheet"><div class="pdf-lh"><div><div class="pdf-org-name">Verlex Pharmacy</div><div class="pdf-org-sub">Drugstore · CDRR-NCR-DS-383345<br>1366 Block 20 Lot 1 Landaska Torcillo St., Kaunlaran Village, Caloocan City, NCR</div></div><div class="pdf-rpt-title"><h2>Monthly Drug Price Report</h2><p>EDPMS Version 2.0 · DOH AO No. 2011-0012<br>Reporting Period: ${MN[month]} ${year}</p></div></div><div class="pdf-meta"><span>Facility Type: Drugstore / Pharmacy</span><span>Total Entries: ${rows.length}</span><span>Generated: ${new Date().toLocaleDateString('en-PH',{year:'numeric',month:'long',day:'numeric'})}</span></div><table class="pdf-tbl"><thead><tr><th>Generic Name</th><th>Form</th><th>Strength</th><th>Manufacturer</th><th>Lot No.</th><th>Expiry</th><th>Purchase ₱</th><th>Selling ₱</th><th>Stock</th><th>MDRP</th></tr></thead><tbody>${rows.map(r => `<tr><td>${r.gn}</td><td>${r.form}</td><td>${r.str}</td><td>${r.mfr}</td><td>${r.lot}</td><td>${r.exp}</td><td>${r.pp || '—'}</td><td style="${r.status === 'EXCEEDED' ? 'color:#c0392b;font-weight:700' : ''}">${r.sp || '—'}</td><td>${r.stk !== '' ? r.stk + ' units' : '—'}</td><td style="${r.status === 'EXCEEDED' ? 'color:#c0392b;font-weight:700' : ''}">${r.mdrp ? r.status : '—'}</td></tr>`).join('')}</tbody></table><div class="pdf-sig"><div class="pdf-sig-field"><div class="pdf-sig-line"></div><div class="pdf-sig-lbl">Submitted By</div></div><div class="pdf-sig-field"><div class="pdf-sig-line"></div><div class="pdf-sig-lbl">Signature Over Printed Name</div></div><div class="pdf-sig-field"><div class="pdf-sig-line"></div><div class="pdf-sig-lbl">Date Submitted</div></div></div></div>`;
+}
+function previewRpt() {
+  const month = parseInt(document.getElementById('rptM').value), year = parseInt(document.getElementById('rptY').value);
+  const rows = getRptRows(month, year); const card = document.getElementById('rptCard'); const body = document.getElementById('rptBody');
+  card.style.display = 'block';
+  if (!rows.length) { body.innerHTML = `<div class="empty"><h3>No data for this period</h3><p>Ensure drugs and batches have been added with prices for ${MN[month]} ${year}.</p></div>`; return; }
+  body.innerHTML = buildPDF(rows, month, year); card.scrollIntoView({ behavior: 'smooth' });
+}
+function doExcel() {
+  const month = parseInt(document.getElementById('rptM').value), year = parseInt(document.getElementById('rptY').value);
+  const rows = getRptRows(month, year); if (!rows.length) { toast('No data for the selected period.', 'wrn'); return; }
+  const hdr = ['Generic Name','Dosage Form','Strength','Manufacturer','Packaging','Lot No.','Expiry Date','Purchase Price (₱)','Selling Price (₱)','Stock on Hand','MDRP (₱)','GMAP (₱)','MDRP Status'];
+  const wb = XLSX.utils.book_new(); const ws = XLSX.utils.aoa_to_sheet([hdr, ...rows.map(r => [r.gn,r.form,r.str,r.mfr,r.pack,r.lot,r.exp,r.pp,r.sp,r.stk,r.mdrp,r.gmap,r.status])]);
+  ws['!cols'] = hdr.map(() => ({ wch: 22 })); XLSX.utils.book_append_sheet(wb, ws, `${MN[month]} ${year}`);
+  XLSX.writeFile(wb, `Verlex_EDPMS_${MN[month]}_${year}.xlsx`); toast('Excel report downloaded.', 'ok');
+}
+function doPDF() {
+  const month = parseInt(document.getElementById('rptM').value), year = parseInt(document.getElementById('rptY').value);
+  const rows = getRptRows(month, year); if (!rows.length) { toast('No data for the selected period.', 'wrn'); return; }
+  document.getElementById('pdfBody').innerHTML = buildPDF(rows, month, year); om('mPDF');
+}
+
+// TOAST
+function toast(msg, type = 'ok') {
+  const w = document.getElementById('toastWrap'); const t = document.createElement('div'); t.className = `toast ${type}`;
+  t.innerHTML = `<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" style="flex-shrink:0;opacity:.7">${type==='ok'?'<path d="M10.97 4.97a.75.75 0 011.07 1.05l-3.99 4.99a.75.75 0 01-1.08.02L4.324 8.384a.75.75 0 111.06-1.06l2.094 2.093 3.473-4.425z"/><path d="M8 15A7 7 0 108 1a7 7 0 000 14zm0 1A8 8 0 118 0a8 8 0 010 16z"/>':type==='err'?'<path d="M4.646 4.646a.5.5 0 01.708 0L8 7.293l2.646-2.647a.5.5 0 01.708.708L8.707 8l2.647 2.646a.5.5 0 01-.708.708L8 8.707l-2.646 2.647a.5.5 0 01-.708-.708L7.293 8 4.646 5.354a.5.5 0 010-.708z"/><path d="M8 15A7 7 0 108 1a7 7 0 000 14zm0 1A8 8 0 118 0a8 8 0 010 16z"/>':'<path d="M8 15A7 7 0 108 1a7 7 0 000 14zm0 1A8 8 0 118 0a8 8 0 010 16z"/><path d="M7.002 11a1 1 0 112 0 1 1 0 01-2 0zM7.1 4.995a.905.905 0 111.8 0l-.35 3.507a.552.552 0 01-1.1 0L7.1 4.995z"/>'}
+  </svg><span>${msg}</span>`;
+  w.appendChild(t); setTimeout(() => t.remove(), 3500);
+}
+
+// INIT
+updateDL(); renderDash(); setupRpt(); renderLTO();
+if (!drugs.length) setTimeout(() => toast('Welcome to Verlex Pharmacy EDPMS.', 'ok'), 700);
+</script>
+</body>
+</html>
